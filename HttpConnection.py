@@ -109,12 +109,46 @@ def connect_putPlate(host, usr, passwd, data=None):
             response1.raise_for_status()
         except requests.exceptions.RequestException as e:
             if response1.status_code==400:
-                return(-400, "Client side error, wrong format of excel")
+                return(-400, "Client side error, check whether you have the repeated number. Wrong format of excel")
             if response1.status_code == 401:
                 return (-1, "Username or password wrong")
             else:
                 return(-1, str(e))
         return (200, "succeed")
+
+
+def connect_putPlateNVR(host, usr, passwd, data=None):
+    if not data:
+        return (-1, "writing null stream ")
+    cam = Client(host, usr, passwd)
+    if (cam.statusCode != 200):
+        return(-1, cam.statusStr)
+    else:
+        full_url = host+'/ISAPI/Traffic/plateList'
+        try:
+            response1 = cam.req.request("put", full_url,
+                                        timeout=cam.timeout, data=data)
+        except requests.exceptions.Timeout:
+            cam.statusCode = -1
+            cam.statusStr = "Time out, connection lost"
+            return (-1, cam.statusStr)
+        except requests.exceptions.RequestException as e:
+            cam.statusCode = str(e)
+            cam.statusCode = -1
+            return (-1, cam.statusStr)
+        try:
+            response1.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            if response1.status_code==400:
+                return(-400, "Client side error, check whether you have the repeated number. Wrong format of excel")
+            if response1.status_code == 401:
+                return (-1, "Username or password wrong")
+            else:
+                return(-1, str(e))
+        return (200, "succeed")
+
+
+
 
 
 def connect_getPlate(host, usr, passwd):
@@ -129,8 +163,6 @@ def connect_getPlate(host, usr, passwd):
             cam.statusCode = -1
             cam.statusStr = "Time out, connection lost"
             return (-1, cam.statusStr)
-    # Maybe set up for a retry, or continue in a retry loop
-    # Tell the user their URL was bad and try a different one
         except requests.exceptions.RequestException as e:
             cam.statusCode = str(e)
             cam.statusCode = -1
@@ -138,20 +170,42 @@ def connect_getPlate(host, usr, passwd):
         try:
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
-            if response.status_code == 400:
-                return (-1, "Client side erro")
             if response.status_code == 401:
                 return (-1, "Username or password wrong")
+            if response.status_code == 403:
+                full_url = host + '/ISAPI/Traffic/plateList'
+                try:
+                    response = cam.req.request("get", full_url, timeout=cam.timeout, data=None)
+                except requests.exceptions.Timeout:
+                    cam.statusCode = -1
+                    cam.statusStr = "Time out, connection lost"
+                    return (-1, cam.statusStr)
+                except requests.exceptions.RequestException as e:
+                    cam.statusCode = str(e)
+                    cam.statusCode = -1
+                    return (-1, cam.statusStr)
+                try:
+                    response.raise_for_status()
+                except requests.exceptions.RequestException as e:
+                        return (-1, str(e))
+                return (999,response.content)
             else:
                 return (-1, str(e))
-        # try:
-        #     f = open(path, "wb+")
-        #     f.write(response.content)
-        # except OSError as e:
-        #     return (-1, "IO error: Can't write file to this directory, Check your Access")
-        # finally:
-        #     f.close()
+
         return (200, response.content)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def connect_getDevInfo(host, usr, passwd):
